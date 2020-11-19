@@ -1,0 +1,319 @@
+---
+title: "Pima Indian Diabetes Prediction"
+author: "Alex Rivera Cruz"
+date: "19/11/2020"
+output: pdf_document
+---
+
+# Overview 
+
+This project is related to the Prediction Diabetes Project for the Harvardx Capstone course of Data Science. The present report start with a general idea of the project and by representing its objective.
+
+Then the given dataset will be prepared and setup. An exploratory data analysis is carried out in order to develop a machine learning algorithm that could predict if someone has Diabetes until a final model. Results will be explained. Finally the report ends with some concluding remarks.
+
+## Introduction
+
+Diabetes affects an estimated 30.3 million people in the United States and is the seventh leading cause of death. Diabetes can affect many parts of the body and is associated with serious complications, such as heart disease and stroke, blindness, kidney failure, and lower limb amputation.
+
+To limit the rates of this disease, prevention on a primary and secondary level is preferred to life-long treatment. In order to do this, healthcare providers must have robust methods of predicting which patients would likely have the disease. To anticipate  risk of diabetes, development of a robust model is necessary.
+
+This study is focused on analysis of the Diabetes dataset downloaded to a personal computer from Kaggle at: https://www.kaggle.com/uciml/pima-indians-diabetes-database 
+The dataset relates frequencies and statistics of physiological measurements on women over the age of 21 belonging to the Pima Native American tribe residing of Arizona. 
+
+## Aim of the project 
+
+The goal of this project is to develop a machine learning algorithm that can predict incidence of Diabetes in a population of Pima Indians. Four different regression approaches will be attempted to yield an optimised accuracy with sensitivity and specificity measures.
+
+## Dataset
+We require the next packages to complete the project.
+
+The dataset will be downloaded from Kaggle and stored on a personal computer, where it will be pushed into R. 
+
+```{r error=FALSE, message=FALSE, warning=FALSE}
+#Packages required
+if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+if(!require(tibble)) install.packages("tibble", repos = "http://cran.us.r-project.org")
+if(!require(plyr)) install.packages("plyr", repos = "http://cran.us.r-project.org")
+if(!require(ggrepel)) install.packages("ggrepel", repos = "http://cran.us.r-project.org")
+if(!require(gridExtra)) install.packages("gridExtra", repos = "http://cran.us.r-project.org")
+if(!require(readr)) install.packages("readr", repos = "http://cran.us.r-project.org")
+if(!require(corrplot)) install.packages("corrplot", repos = "http://cran.us.r-project.org")
+if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
+if(!require(xgboost)) install.packages("xgboost", repos = "http://cran.us.r-project.org")
+if(!require(e1071)) install.packages("xgboost", repos = "http://cran.us.r-project.org")
+if(!require(randomForest)) install.packages("xgboost", repos = "http://cran.us.r-project.org")
+
+library(tidyverse)
+library(tibble)
+library(readr)
+library(plyr)
+library(ggrepel)
+library(gridExtra)
+library(readr)
+library(corrplot)
+library(caret)
+library(xgboost)
+library(e1071)
+library(randomForest)
+#Download the dataset from an excel sheet on computer
+file.exists("E:\\Courses\\Data Science\\Lessons\\9. Capstone Project All Learners\\9 Capstone Project All Learners\\Pima Project\\Pima Diabetes\\diabetes.csv")
+pima<- read_csv("E:\\Courses\\Data Science\\Lessons\\9. Capstone Project All Learners\\9 Capstone Project All Learners\\Pima Project\\Pima Diabetes\\diabetes.csv")
+
+```
+
+\pagebreak
+
+# Methods and Analysis
+
+## Data Analysis
+
+After upload, we will study the structure of the `pima` dataset
+
+```{r, warning= FALSE, error=FALSE}
+#Check the first 6 rows of the provided dataset
+head(pima)%>%
+  print.data.frame()
+```
+
+`pima` appears to be in tidy format, meaning that each variable forms a column, and each row represents a observation, and the observational unit forms a table. 
+Next, the parameters within the dataset will be defined. 
+
+```{r, warning= FALSE, error=FALSE}
+#See the overall structure of the dataset
+str(pima)
+```
+
+It appears that `pima` has 768 observations of 9 variables, all of which are in numeric format. 
+
+-`Pregnancies` describes the gravidity of each patient in the dataset.
+
+-`Glucose` describes the mg of glucose per every dL of blood in the patient.
+
+-`BloodPressure` describes the diastolic blood pressure of each patient.
+
+-`SkinThickness` measures the epidermal, dermal, and subcutaneous layers of brachial skin for each patient.
+
+-`Insulin` describes the mIU of insulin protein per litre of blood after 2 hours of fasting.
+
+-`BMI` describes the standardised body mass index of each patient. 
+
+-`DiabetesPedigreeFunction` describes the result of an unlisted function that calculates the genetic influence of Diabates in each patient.
+
+-`Age` describes the rounded age in years of each patient.
+
+-`Outcome` denotes `0` for non-diabetic and `1` for diabetic for each patient.
+
+Next, missing values are quite common in real-life datasets, so it is imperative to inspect the set for this.
+
+```{r, warning= FALSE, error=FALSE}
+#Find the proportion of the dataset that is NA
+sum(is.na(pima))
+sum(is.na(pima))/(ncol(pima)*nrow(pima))
+```
+
+We confirm that there are no missing values in the `pima` dataset.
+
+Now that the data has been cleaned up, it is ready for some visualisation analysis. 
+
+## Visualisation 
+
+Visualisation is a key step before modelling. Generating plots enables the data scientist to have an overall understand of trends in the data, faciliating the  analysis.
+
+There are 8 parameters that could be possibly correlated with Diabetes in the dataset. In this section, each prospective parameter will be stratified by Diabates status to observe differences in the distribution. 
+
+```{r first chart, error=FALSE, warning=FALSE}
+#Convert outcome to binary factor class#
+pima$Outcome <- as.factor(pima$Outcome)
+#Box and whisker plot for pregnancies stratified by Diabates status
+p1<- pima %>% group_by(Outcome) %>% ggplot(aes(y=Pregnancies,x=Outcome)) + geom_boxplot(aes(fill=Outcome)) + 
+  labs(title="Pregnancies", x= "Diabetes Status", y = "Pregnancies") + theme(legend.position = "none")
+#Box and whisker plot for blood glucose stratified by Diabates status
+p2<- pima %>% group_by(Outcome) %>% ggplot(aes(y=Glucose,x=Outcome)) + geom_boxplot(aes(fill=Outcome)) + 
+  labs(title="Blood Glucose", x= "Diabetes Status", y = "Blood Glucose")  + theme(legend.position = "none")
+#Box and whisker plot for BP stratified by Diabates status
+p3<- pima %>% group_by(Outcome) %>% ggplot(aes(y=BloodPressure,x=Outcome)) + geom_boxplot(aes(fill=Outcome)) + 
+  labs(title="Blood Pressure", x= "Diabetes Status", y = "Blood Pressure")  + theme(legend.position = "none")
+#Box and whisker plot for skin thickness stratified by Diabates status
+p4<- pima %>% group_by(Outcome) %>% ggplot(aes(y=SkinThickness,x=Outcome)) + geom_boxplot(aes(fill=Outcome)) + 
+  labs(title="Skin Thickness", x= "Diabetes Status", y = "Skin Thickness")  + theme(legend.position = "none")
+#arrange the plots in a 2x2
+grid.arrange(p1,p2,p3,p4,ncol=2)
+```
+
+From looking at the distribution of these parameters stratified by Diabates status, it appears that women who have had more pregnancies have a higher mean incidence of Diabates compared to women with fewer pregnancies. Additionally, the mean plasma glucose levels in those with Diabates is higher than in healthy patients. These two parameters may prove to be useful predictors in the models. 
+Blood pressure and skin thickness don't appear to have a distinct difference across Diabates status. 
+
+```{r second chart, warning= FALSE, error=FALSE}
+#Box and whisker plot for insulin levels stratified by Diabates status
+p5<- pima %>% group_by(Outcome) %>% ggplot(aes(y=Insulin,x=Outcome)) + geom_boxplot(aes(fill=Outcome)) + 
+  labs(title="Insulin Levels", x= "Diabetes Status", y = "Insulin Levels")  + theme(legend.position = "none")
+#Box and whisker plot for BMI stratified by Diabates status
+p6<- pima %>% group_by(Outcome) %>% ggplot(aes(y=BMI,x=Outcome)) + geom_boxplot(aes(fill=Outcome)) + 
+  labs(title="BMI", x= "Diabetes Status", y = "BMI")  + theme(legend.position = "none")
+#Box and whisker plot for pedigree levels stratified by Diabates status
+p7<- pima %>% group_by(Outcome) %>% ggplot(aes(y=DiabetesPedigreeFunction,x=Outcome)) + geom_boxplot(aes(fill=Outcome)) + 
+  labs(title="Diabetes Pedigree Levels", x= "Diabetes Status", y = "Pedigree Levels")  + theme(legend.position = "none")
+#Box and whisker plot for ages stratified by Diabates status
+p8<- pima %>% group_by(Outcome) %>% ggplot(aes(y=Age,x=Outcome)) + geom_boxplot(aes(fill=Outcome)) + 
+  labs(title="Age", x= "Diabetes Status", y = "Age")  + theme(legend.position = "none")
+#arrange the plots in a 2x2#
+grid.arrange(p5,p6,p7,p8,ncol=2)
+```
+
+In this last charts, BMI and and age more clearly have a relationship that can be seen across the diabetes status, but insulin levels and diabetes pedigree don't appear to have a distinct difference. 
+However, all the parameters analysed will have to initially be put into the model to see which variables are statistically significant in their relationship with Diabates status. 
+
+Now there may be high potential for confounding variables in this dataset. For example, the parameter `SkinThickness` is a measure of fat accumulation while BMI is also a common measure for load of the body. If these two variables have a high absolute correlation (>0.5), then they should be excluded from the analysis. 
+To confirm that hypothesis we have to see this plot: 
+
+```{r, warning= FALSE, error=FALSE}
+#scatterplot for Skin Thickness on BMI across Diabates status
+pima %>% group_by(Outcome) %>% ggplot() + geom_point(aes(x=BMI, y=SkinThickness, colour=Outcome), alpha=0.5) + 
+  theme(legend.position = "none") + ggtitle("Cutaneous Thickness on BMI Across Diabates Patients")
+#correlation plot between all variables in `pima`
+par( mfrow = c(1,1) )
+pima$Outcome<- as.numeric(pima$Outcome)
+cor1 <- cor(pima, method = c("pearson"))
+cor2 <- round(cor(cor1),2)
+corrplot::corrplot(cor2, method = "color")
+```
+
+It appears that although the variables do have a correlation, none of them have an absolute value above 0.5, making all of them suitable for the models.
+
+## Modelling Approach
+
+Now, we have to split the data into training and test sets. The training set will be used to develop the models, and the test set will be to evaluate the accuracy, sensitive and specificity of each model. 
+The test set will be represented by the 20% of the dataset, as the dataset has less than 800 observations. This split will create a strong balance between parameter estimates and performance statistics. 
+
+```{r, warning= FALSE, error=FALSE}
+#Attempt to convert the variables to class of factor
+pima[sapply(pima, is.character)] <- lapply(pima[sapply(pima, is.character)], as.factor)
+#Split both datasets into an 80:20 split using a seed
+set.seed(1, sample.kind="Rounding")
+sample_size<- floor(0.2*nrow(pima))
+test_index <- sample(seq_len(nrow(pima)), size=sample_size)
+pima_train<- pima[-test_index,]
+pima_test<- pima[test_index,]
+```
+
+### I. Logistic Regression
+
+Logistic regressions are models similar to linear regressions, but they are specialised for discrete rather than continuous outcomes. This makes them a perfect starting point for this study of classification algorithms, namely the binomial outcomes "Diabetic" or "non-Diabetic." 
+
+```{r, warning= FALSE, error=FALSE}
+#Set the plots to a 2x2
+par(mfrow = c(2,2))
+#Calculate the deviance residuals, coefficients, and significances
+pima_train$Outcome<- as.factor(pima_train$Outcome)
+mod_glm <- glm(Outcome ~ ., data = pima_train, family = binomial(link = "logit"))
+summary(mod_glm)
+plot(mod_glm)
+```
+
+Another reason why the general logistic regression is much appreciated is because it shows which variables are significant in their relationship to Diabates outcome. From the table and plots above, it appears that regression intercept, `Pregnancies`, `Glucose`, `BMI`, and `DiabetesPedigreeFunction` are statistically significant to an alpha of almost 0. The variable `BloodPressure` is significant at the alpha=0.05. All of these parameters will be selected to continue to the optimised regression.
+
+```{r, warning= FALSE, error=FALSE}
+#Optimised logistic regression with significant parameters
+par(mfrow = c(2,2))
+mod_glm2 <- glm(Outcome~ Pregnancies+Glucose+BloodPressure+BMI + DiabetesPedigreeFunction, 
+                data=pima_train, family=binomial(link= "logit"))
+summary(mod_glm2)
+plot(mod_glm2)
+```
+
+In order to predict a binary outcome, bounds must be set. The regression continues in order to create a confusion matrix.
+
+```{r, warning= FALSE, error=FALSE}
+pima_test$Outcome<- as.factor(pima_test$Outcome)
+pred_glm <- predict(mod_glm2,pima_test, type = "response")
+pred_glm <- ifelse(pred_glm <= 0.5, 1, 2)
+pred_glm<- as.factor(pred_glm)
+cm_glm<- confusionMatrix(pred_glm,pima_test$Outcome)
+cm_glm
+```
+
+The confusion matrix generated with the general logistic regression has a balanced accuracy of 0.7818, which is actually quite impressive for an initial trial. The sensitivity of the model is high at 0.8713. However, the specificity has lower value than desired, it is 0.6923. 
+
+### II. k-Nearest Neighbors
+
+The next model to be attempted will be the k-Nearest Neighbours algorithm. This model operates on the principle that test datapoints are similar to their "neighbouring" datapoints. These `k` values are used to develop the prediction. Compared to the general logistic regression, the kNN approach is a non-parametric model that is more supportive of non-linear models. 
+
+```{r, warning= FALSE, error=FALSE}
+#Develop a model to test the accuracy on the number of neighbours
+mod_knn <- train(Outcome ~ ., data= pima_test, method = "knn", tuneGrid = data.frame(k = seq(1,20,1)))
+mod_knn %>% ggplot()+geom_line(aes(x=k, y=Accuracy)) + 
+  labs(title= "Change in Regression Accuracy with varying optimal kNN")
+```
+
+According to the graph, the optimal number of neighbours for the model to search for is `k`=17.
+```{r, warning= FALSE, error=FALSE}
+mod_knn$bestTune
+```
+
+This value will be used in the prediction for the test dataset.
+
+```{r error=FALSE, warning=TRUE}
+pred_knn <- predict(mod_knn, pima_test, type="raw")
+cm_knn<- confusionMatrix(pred_knn,pima_test$Outcome)
+cm_knn
+```
+
+The kNN regression show us that we have a lower balanced accuracy compared to the logistic regression model, at 0.7104. Its sensitivity  improved at 0.9208. However, the specificity is quite low at 0.5. 
+
+### III. Random Forest 
+
+This type of regression is a little more advanced, based on the concept of creating several "decision trees". This involves a branching equation to derive the output, making random forest models theoretically quite accurate, but very time-intensive.
+
+```{r, warning= FALSE, error=FALSE}
+#Develop a random forest regression model to produce a confusion matrix#
+mod_rf <- train(Outcome ~ ., method = "rf", data = pima_train)
+pred_rf <- predict(mod_rf, pima_test)
+pima_test$Outcome<- as.factor(pima_test$Outcome)
+cm_rf<- confusionMatrix(pred_rf,pima_test$Outcome)
+cm_rf
+```
+
+The random forest model shows us that the balanced accuracy is 0.7328, the sensitivity is 0.8119, and the specificity is low at 0.6538. Its values, along with the kNN values, are inferior to the initial logistic regression. 
+
+### IV. XGBoost 
+
+Finally, the novel eXtreme Gradient Boosting software algorithm will be analysed. This machine-learning approach has gained several awards and traction on the web, and is the algorithm of choice for data science competitions on Kaggle. Its parallel tree boosting method is incredibly flexible and more time-efficient than the Random Forest algorithm. 
+
+```{r, warning= FALSE, error=FALSE}
+# Develop an XGB regression model to produce a confusion matrix#
+par(mfrow = c(2,1))
+mod_xgb <- train(Outcome ~ ., method = "xgbTree", data = pima_test)
+plot(mod_xgb)
+pred_xgb <- predict(mod_xgb, pima_test)
+cm_xgb<- confusionMatrix(pred_xgb,pima_test$Outcome)
+cm_xgb
+```
+
+It appears that the XGBoost model was the superior approach compared to the three previously tested model approaches. Its balanced accuracy is impressive at 0.8356, and its sensitivity is very high at 0.9405. Specificity has been shown to be lower in this modelling study, but this approach had the highest value at 0.7308. 
+
+\pagebreak
+
+# Results and Discussion
+
+```{r, warning= FALSE, error=FALSE}
+# Create a knitr table of the regression approaches and their values#
+cm<- data.frame(c("Logistic Model", "K Nearest Neighbors", "Random Forest", "XGBoost"), c(cm_glm$byClass[1], 
+                cm_knn$byClass[1], cm_rf$byClass[1], cm_xgb$byClass[1]), c(cm_glm$byClass[2], cm_knn$byClass[2], 
+                cm_rf$byClass[2], cm_xgb$byClass[2]), c(cm_glm$byClass[11], cm_knn$byClass[11], cm_rf$byClass[11], 
+                cm_xgb$byClass[11]))
+cm<- as_tibble(cm)
+colnames(cm) <- c("Model", "Sensitivity", "Specificity", "Balanced Accuracy")
+cm %>% knitr::kable()
+```
+
+The analysis of the four regression approaches shows that the XGBoost was the most superior, with the highest sensitivity, highest specificity, and balanced accuracy. The logistic regression model has the next highest balanced accuracy, followed by the k Nearest Neighbors and the Random Forest Approaches.
+
+# Conclusion
+
+Machine learning algorithm was built to predict Diabetes status with Pima Indians Diabetes dataset.
+
+The XGBoost model is characterized by the higher accuracy value and is hence the optimal model to use for the present project.
+
+For further improvement in the analysis of this study, it would be recommended to increase the diversity of algorithms tested. The caret package that was needed in this study holds a plethora of different approaches that may be suitable for this investigation. 
+
+
